@@ -1,0 +1,48 @@
+name: Build Debug APK
+
+on:
+  push:
+    branches: [ "dev", "main" ]
+  workflow_dispatch: # Позволяет запускать сборку вручную кнопкой
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Бесплатный Linux-раннер с 7 ГБ ОЗУ и 4 ядрами CPU
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Create dummy google-services.json
+        run: |
+          cp app/google-services.json.example app/google-services.json
+          echo "Created dummy google-services.json"
+
+      - name: Create dummy stoatbuild.properties
+        run: |
+          cat << 'EOF' > stoatbuild.properties
+          sentry.dsn=
+          sentry.upload_mappings=false
+          build.debug.app_name=Stoat Debug
+          build.flavour_id=ZZUU
+          EOF
+          echo "Created dummy stoatbuild.properties"
+
+      - name: Build Debug APK with Gradle
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stoat-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7 # Хранить артефакт 7 дней
